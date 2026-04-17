@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Information about a registered user",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "User's display name, max 50 chars"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User's registered email address"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Base64 string or URL of the user avatar"
+        },
+        "lastLogin": {
+          "type": "timestamp",
+          "description": "Timestamp of the user's last login"
+        },
+        "bio": {
+          "type": "string",
+          "description": "Short biography for the user profile, max 200 chars"
+        }
+      },
+      "required": ["email"]
+    },
+    "UserFile": {
+      "title": "User File metadata",
+      "description": "Metadata for a file uploaded to Firebase Storage by the user",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Original file name"
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "Path in Firebase Storage"
+        },
+        "downloadURL": {
+          "type": "string",
+          "description": "Download accessible URL"
+        },
+        "size": {
+          "type": "number",
+          "description": "File size in bytes"
+        },
+        "type": {
+          "type": "string",
+          "description": "MIME type of the file"
+        },
+        "folderId": {
+          "type": "string",
+          "description": "Optional folder ID"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Timestamp when the file was uploaded"
+        }
+      },
+      "required": ["name", "storagePath", "downloadURL", "size", "type", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "UserProfile"
+      },
+      "description": "Stores user profiles"
+    },
+    "/users/{userId}/files/{fileId}": {
+      "schema": {
+        "$ref": "UserFile"
+      },
+      "description": "Stores metadata of files uploaded by the user"
+    }
+  }
+}

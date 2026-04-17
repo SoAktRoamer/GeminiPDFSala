@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Document ID: userId (uid)
+    // Fields:
+    //  - name (string)
+    //  - email (string)
+    //  - photoURL (string)
+    //  - lastLogin (timestamp)
+    //  - bio (string)
+    //
+    // Subcollection: users/{userId}/files
+    // Document ID: fileId
+    // Fields:
+    //  - name (string)
+    //  - storagePath (string)
+    //  - downloadURL (string)
+    //  - size (number)
+    //  - type (string)
+    //  - folderId (string) - optional
+    //  - createdAt (timestamp)
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email']) &&
+             data.email is string && isValidEmail(data.email) &&
+             (!('name' in data) || (data.name is string && data.name.size() <= 60)) &&
+             (!('photoURL' in data) || data.photoURL is string) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 300)) &&
+             (!('lastLogin' in data) || data.lastLogin is timestamp);
+    }
+    
+    function isValidUserFile(data) {
+      return data.keys().hasAll(['name', 'storagePath', 'downloadURL', 'size', 'type', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 256 &&
+             data.storagePath is string && data.storagePath.size() > 0 && data.storagePath.size() <= 1024 &&
+             data.downloadURL is string && data.downloadURL.size() > 0 && data.downloadURL.size() <= 2048 &&
+             data.size is number && data.size >= 0 &&
+             data.type is string && data.type.size() > 0 && data.type.size() < 100 &&
+             data.createdAt is timestamp &&
+             (!('folderId' in data) || (data.folderId is string && data.folderId.size() <= 100));
+    }
+
+    // ===============================================================
+    // Security Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // User can read their own profile
+      allow read: if isOwner(userId);
+      
+      // User can create or update their own profile
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+      allow delete: if isOwner(userId);
+
+      // User's files metadata
+      match /files/{fileId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidUserFile(request.resource.data);
+        allow update: if isOwner(userId) && isValidUserFile(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}
