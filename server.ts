@@ -38,12 +38,21 @@ async function startServer() {
     console.log('Vite development middleware integrated.');
   } else {
     // Serving static files in production
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.resolve(__dirname, 'dist');
+    console.log(`Production Mode: Serving static files from ${distPath}`);
+    
     app.use(express.static(distPath));
+    
+    // Explicitly handle all other routes for SPA
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      const indexPath = path.join(distPath, 'index.html');
+      res.sendFile(indexPath, (err) => {
+        if (err) {
+          console.error(`Error sending index.html: ${err.message}`);
+          res.status(404).send('Not Found');
+        }
+      });
     });
-    console.log('Serving production build from /dist.');
   }
 
   app.listen(PORT, '0.0.0.0', () => {
